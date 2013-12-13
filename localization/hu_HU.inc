@@ -1,6 +1,6 @@
 <?php
 $messages = array();
-$messages['sigvalid'] = 'Hiteles digitÃ¡lis alÃ¡Ã­rÃ¡s: $sender. HitelesÃ­tve $issuer Ã¡ltal.';
-$messages['sigunverified'] = 'Hiteles digitÃ¡lis alÃ¡Ã­rÃ¡s (hibÃ¡s bizonyÃ­tvÃ¡nnyal): $sender.  HitelesÃ­tve $issuer Ã¡ltal.';
-$messages['siginvalid'] = 'HibÃ¡s digitÃ¡lis alÃ¡Ã­rÃ¡s.';
+$messages['sigvalid'] = 'Hiteles digitális aláírás: $sender. Hitelesítve $issuer által.';
+$messages['sigunverified'] = 'Hiteles digitális aláírás (hibás bizonyítvánnyal): $sender.  Hitelesítve $issuer által.';
+$messages['siginvalid'] = 'Hibás digitális aláírás.';
 ?>
