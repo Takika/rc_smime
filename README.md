@@ -1,4 +1,4 @@
-rc_smime_verify
+rc_smime
 ===============
 
-Roundcube webmail plugin to verify S/MIME signed messages.
+Roundcube webmail plugin to verify and sign S/MIME messages.
