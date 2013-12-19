@@ -1,20 +1,73 @@
 <?php
 
-class rc_smime_verify extends rcube_plugin
+class rc_smime extends rcube_plugin
 {
+    public  $task = 'mail|settings';
+
     private $rc;
+    private $uname = '';
+    private $homedir;
     private $css_loaded;
+    private $dir_checked;
     private $signatures   = array();
     private $signed_parts = array();
 
     function init()
     {
         $this->rc    = rcube::get_instance();
+        $this->uname = $this->rc->user->get_username();
+        $homedir     = $this->rc->config->get('rc_smime_homedir', $this->home . '/users');
+        
+        if (!$this->dir_checked) {
+            $this->check_dir($homedir);
+            $this->dir_checked = true;
+        }
 
         if ($this->rc->task == 'mail') {
+            // include localization (if wasn't included before)
+            $this->add_texts('localization/', true);
+            $this->load_css();
+            // load javascript
+            $this->include_script('rc_smime.js');
+
             // message parse/display hooks
             $this->add_hook('message_body_prefix', array($this, 'message_body_prefix_hook'));
             $this->add_hook('message_part_structure', array($this, 'message_part_structure_hook'));
+            // message sign hook
+            $this->add_hook('message_before_send', array($this, 'message_before_send_hook'));
+
+            if ($this->rc->action == 'compose') {
+                if ($this->api->output->type == "html") {
+                    // add encrypt and sign checkboxes to composeoptions
+                    $smime_encrypt_opts = array(
+                        'id' => 'smime_encrypt',
+                        'type' => 'checkbox'
+                    );
+                    if ($this->rc->config->get('smime_encrypt', false)) {
+                        $smime_encrypt_opts['checked'] = 'checked';
+                    }
+
+                    $smime_encrypt = new html_inputfield($smime_encrypt_opts);
+                    $this->api->add_content(
+                        html::span('composeoption', html::label(null, $smime_encrypt->show() . $this->gettext('smime_encrypt_label'))),
+                        "composeoptions"
+                    );
+                    $smime_sign_opts = array(
+                        'id' => 'smime_sign',
+                        'type' => 'checkbox'
+                    );
+                    if ($this->rc->config->get('smime_sign', false)) {
+                        $smime_sign_opts['checked'] = 'checked';
+                    }
+
+                    $smime_sign = new html_inputfield($smime_sign_opts);
+                    $this->api->add_content(
+                        html::span('composeoption', html::label(null, $smime_sign->show() . $this->gettext('smime_sign_label'))),
+                        "composeoptions"
+                    );
+                }
+            }
+        } elseif ($this->rc->task == 'settings') {
         }
     }
 
@@ -28,9 +81,6 @@ class rc_smime_verify extends rcube_plugin
 
         // Signature verification status
         if (isset($this->signed_parts[$part_id]) && ($sig = $this->signatures[$this->signed_parts[$part_id]])) {
-            // include localization (if wasn't included before)
-            $this->add_texts('localization/');
-            $this->load_css();
             $attrib['id'] = 'smime-message';
             switch ($sig['valid']) {
                 case "valid":
@@ -77,6 +127,25 @@ class rc_smime_verify extends rcube_plugin
         return $args;
     }
 
+    function message_before_send_hook($args)
+    {
+        if ($this->uname != 'taki') {
+            return $args;
+        }
+
+        $input_file = tempnam($this->homedir, 'rcube_sign_input_');
+
+        $msg     = $args['message'];
+        $msg->saveMessageBody($input_file);
+        /*
+        $headers = $msg->txtHeaders();
+        $full = $msg->getMessage();
+        $this->_debug($full, 'msg', true);
+        */
+
+        return $args;
+    }
+
     private function parse_signed(&$args)
     {
         $struct = $args['structure'];
@@ -98,9 +167,9 @@ class rc_smime_verify extends rcube_plugin
         // Verify signature
         if ($this->rc->action == 'show' || $this->rc->action == 'preview') {
             $msg_part    = $struct->parts[0];
-            $full_file   = tempnam('/tmp', 'rcube_mail_full_');
-            $cert_file   = tempnam('/tmp', 'rcube_mail_cert_');
-            $part_file   = tempnam('/tmp', 'rcube_mail_part_');
+            $full_file   = tempnam($this->homedir, 'rcube_mail_full_');
+            $cert_file   = tempnam($this->homedir, 'rcube_mail_cert_');
+            $part_file   = tempnam($this->homedir, 'rcube_mail_part_');
 
             $full_handle = fopen($full_file, "w");
             $fullbody = $this->rc->storage->get_raw_body($msg->uid, $full_handle);
@@ -252,8 +321,69 @@ class rc_smime_verify extends rcube_plugin
         if ($this->css_loaded) {
             return;
         } else {
-            $this->include_stylesheet("skins/rc_smime_verify.css");
+            $this->include_stylesheet("skins/rc_smime.css");
             $this->css_loaded = true;
         }
+    }
+
+    private function check_dir($dir)
+    {
+        // check if homedir exists (create it if not) and is readable
+        if (!$dir) {
+            return $this->rc->raise_error(array(
+                'code'    => 999,
+                'type'    => 'php',
+                'file'    => __FILE__,
+                'line'    => __LINE__,
+                'message' => "Option 'rc_smime_homedir' not specified",
+            ), true, false);
+        }
+        if (!file_exists($dir)) {
+            return $this->rc->raise_error(array(
+                'code'    => 999,
+                'type'    => 'php',
+                'file'    => __FILE__,
+                'line'    => __LINE__,
+                'message' => "Keys directory doesn't exists: $dir",
+            ), true, false);
+        }
+        if (!is_writable($dir)) {
+            return $this->rc->raise_error(array(
+                'code'    => 999,
+                'type'    => 'php',
+                'file'    => __FILE__,
+                'line'    => __LINE__,
+                'message' => "Keys directory isn't writeable: $dir",
+            ), true, false);
+        }
+
+        $dir = $dir . '/' . $this->uname;
+
+        // check if user's homedir exists (create it if not) and is readable
+        if (!file_exists($dir)) {
+            mkdir($dir, 0700);
+        }
+
+        if (!file_exists($dir)) {
+            return $this->rc->raise_error(array(
+                'code'    => 999,
+                'type'    => 'php',
+                'file'    => __FILE__,
+                'line'    => __LINE__,
+                'message' => "Unable to create keys directory: $dir",
+            ), true, false);
+        }
+
+        if (!is_writable($dir)) {
+            return $this->rc->raise_error(array(
+                'code'    => 999,
+                'type'    => 'php',
+                'file'    => __FILE__,
+                'line'    => __LINE__,
+                'message' => "Unable to write to keys directory: $dir",
+            ), true, false);
+        }
+
+        $this->homedir = $dir;
     }
 }
