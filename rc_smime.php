@@ -82,10 +82,22 @@ class rc_smime extends rcube_plugin
         // Signature verification status
         if (isset($this->signed_parts[$part_id]) && ($sig = $this->signatures[$this->signed_parts[$part_id]])) {
             $attrib['id'] = 'smime-message';
+            $sender = '';
+            if (is_array($sig['email'])) {
+                foreach ($sig['email'] as $email) {
+                    if ($sender != '') {
+                        $sender .= ' ' . $this->gettext('alias') . ' ';
+                    }
+
+                    $sender .= ($sig['name'] ? $sig['name'] . ' ' : '') . '<' . $email . '>';
+                }
+            } else {
+                $sender = ($sig['name'] ? $sig['name'] . ' ' : '') . '<' . $sig['email'] . '>';
+            }
+
             switch ($sig['valid']) {
                 case "valid":
                     $attrib['class'] = 'smime-notice';
-                    $sender = ($sig['name'] ? $sig['name'] . ' ' : '') . '<' . $sig['email'] . '>';
                     $msg = rcube::Q($this->gettext(array(
                         'name' => 'sigvalid',
                         'vars' => array(
@@ -96,7 +108,6 @@ class rc_smime extends rcube_plugin
                     break;
                 case "unverified":
                     $attrib['class'] = 'smime-warning';
-                    $sender = ($sig['name'] ? $sig['name'] . ' ' : '') . '<' . $sig['email'] . '>';
                     $msg = rcube::Q($this->gettext(array(
                         'name' => 'sigunverified',
                         'vars' => array(
@@ -244,6 +255,7 @@ class rc_smime extends rcube_plugin
             // Message can be multipart (assign signature to each subpart)
             $this->set_signed_parts($msg_part, $struct->mime_id);
         }
+
         return $args;
     }
 
@@ -270,6 +282,20 @@ class rc_smime extends rcube_plugin
             $issuer = $cert['issuer'];
             if (array_key_exists('O', $issuer)) {
                 $ret['issuer'] = $issuer['O'];
+            }
+        }
+
+        // Scan subAltName for email addresses
+        if (array_key_exists('extensions', $cert) && array_key_exists('subjectAltName', $cert['extensions'])) {
+            $emailAddresses = array();
+            foreach (explode(', ', $cert['extensions']['subjectAltName']) as $altName) {
+                $parts = explode(':', $altName);
+                if ($parts[0] == 'email') {
+                    array_push ($emailAddresses, $parts[1]);
+                }
+            }
+            if (count($emailAddresses) > 0) {
+                $ret['email'] = $emailAddresses;
             }
         }
 
