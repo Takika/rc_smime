@@ -1,3 +1,4 @@
+/*
 if (window.rcmail) {
     rcmail.addEventListener("init", function() {
         this.password = "";
@@ -15,9 +16,6 @@ if (window.rcmail) {
         }
     });
 
-    /**
-    * Processes messages before sending
-    */
     function beforeSend() {
         if (!$("#smime_encrypt").is(":checked") && !$("#smime_sign").is(":checked")) {
             if (confirm(rcmail.gettext("smime_continue_unencrypted", "rc_smime"))) {
@@ -39,3 +37,4 @@ if (window.rcmail) {
         }
     }
 }
+*/

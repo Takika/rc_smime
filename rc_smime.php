@@ -2,7 +2,7 @@
 
 class rc_smime extends rcube_plugin
 {
-    public  $task = 'mail|settings';
+    public $task = 'mail|settings';
 
     private $rc;
     private $uname = '';
@@ -17,7 +17,7 @@ class rc_smime extends rcube_plugin
         $this->rc    = rcube::get_instance();
         $this->uname = $this->rc->user->get_username();
         $homedir     = $this->rc->config->get('rc_smime_homedir', $this->home . '/users');
-        
+
         if (!$this->dir_checked) {
             $this->check_dir($homedir);
             $this->dir_checked = true;
@@ -33,40 +33,6 @@ class rc_smime extends rcube_plugin
             // message parse/display hooks
             $this->add_hook('message_body_prefix', array($this, 'message_body_prefix_hook'));
             $this->add_hook('message_part_structure', array($this, 'message_part_structure_hook'));
-            // message sign hook
-            $this->add_hook('message_before_send', array($this, 'message_before_send_hook'));
-
-            if ($this->rc->action == 'compose') {
-                if ($this->api->output->type == "html") {
-                    // add encrypt and sign checkboxes to composeoptions
-                    $smime_encrypt_opts = array(
-                        'id' => 'smime_encrypt',
-                        'type' => 'checkbox'
-                    );
-                    if ($this->rc->config->get('smime_encrypt', false)) {
-                        $smime_encrypt_opts['checked'] = 'checked';
-                    }
-
-                    $smime_encrypt = new html_inputfield($smime_encrypt_opts);
-                    $this->api->add_content(
-                        html::span('composeoption', html::label(null, $smime_encrypt->show() . $this->gettext('smime_encrypt_label'))),
-                        "composeoptions"
-                    );
-                    $smime_sign_opts = array(
-                        'id' => 'smime_sign',
-                        'type' => 'checkbox'
-                    );
-                    if ($this->rc->config->get('smime_sign', false)) {
-                        $smime_sign_opts['checked'] = 'checked';
-                    }
-
-                    $smime_sign = new html_inputfield($smime_sign_opts);
-                    $this->api->add_content(
-                        html::span('composeoption', html::label(null, $smime_sign->show() . $this->gettext('smime_sign_label'))),
-                        "composeoptions"
-                    );
-                }
-            }
         } elseif ($this->rc->task == 'settings') {
         }
     }
@@ -76,51 +42,53 @@ class rc_smime extends rcube_plugin
         $part_id = $args['part']->mime_id;
 
         // skip: not a message part
-        if ($args['part'] instanceof rcube_message)
+        if ($args['part'] instanceof rcube_message) {
             return $args;
+        }
 
         // Signature verification status
         if (isset($this->signed_parts[$part_id]) && ($sig = $this->signatures[$this->signed_parts[$part_id]])) {
             $attrib['id'] = 'smime-message';
-            $sender = '';
+            $smime_sender = '';
             if (is_array($sig['email'])) {
                 foreach ($sig['email'] as $email) {
-                    if ($sender != '') {
-                        $sender .= ' ' . $this->gettext('alias') . ' ';
+                    if ($smime_sender != '') {
+                        $smime_sender .= ' ' . $this->gettext('alias') . ' ';
                     }
 
-                    $sender .= ($sig['name'] ? $sig['name'] . ' ' : '') . '<' . $email . '>';
+                    $smime_sender .= ($sig['name'] ? $sig['name'] . ' ' : '') . '<' . $email . '>';
                 }
             } else {
-                $sender = ($sig['name'] ? $sig['name'] . ' ' : '') . '<' . $sig['email'] . '>';
+                $smime_sender = ($sig['name'] ? $sig['name'] . ' ' : '') . '<' . $sig['email'] . '>';
             }
 
             switch ($sig['valid']) {
                 case "valid":
                     $attrib['class'] = 'smime-notice';
-                    $msg = rcube::Q($this->gettext(array(
+                    $smime_msg       = rcube::Q($this->gettext(array(
                         'name' => 'sigvalid',
                         'vars' => array(
-                            'sender' => $sender,
+                            'sender' => $smime_sender,
                             'issuer' => $sig['issuer'],
                         ),
                     )));
                     break;
                 case "unverified":
                     $attrib['class'] = 'smime-warning';
-                    $msg = rcube::Q($this->gettext(array(
+                    $smime_msg       = rcube::Q($this->gettext(array(
                         'name' => 'sigunverified',
                         'vars' => array(
-                            'sender' => $sender,
+                            'sender' => $smime_sender,
                             'issuer' => $sig['issuer'],
                         ),
                     )));
                     break;
                 default:
                     $attrib['class'] = 'smime-error';
-                    $msg = rcube::Q($this->gettext('siginvalid'));
+                    $smime_msg       = rcube::Q($this->gettext('siginvalid'));
             }
-            $args['prefix'] .= html::div($attrib, $msg);
+
+            $args['prefix'] .= html::div($attrib, $smime_msg);
 
             // Display each signature message only once
             unset($this->signatures[$this->signed_parts[$part_id]]);
@@ -134,25 +102,6 @@ class rc_smime extends rcube_plugin
         if ($args['mimetype'] == 'multipart/signed') {
             $this->parse_signed($args);
         }
-
-        return $args;
-    }
-
-    function message_before_send_hook($args)
-    {
-        if ($this->uname != 'taki') {
-            return $args;
-        }
-
-        $input_file = tempnam($this->homedir, 'rcube_sign_input_');
-
-        $msg     = $args['message'];
-        $msg->saveMessageBody($input_file);
-        /*
-        $headers = $msg->txtHeaders();
-        $full = $msg->getMessage();
-        $this->_debug($full, 'msg', true);
-        */
 
         return $args;
     }
@@ -177,19 +126,20 @@ class rc_smime extends rcube_plugin
 
         // Verify signature
         if ($this->rc->action == 'show' || $this->rc->action == 'preview') {
-            $msg_part    = $struct->parts[0];
-            $full_file   = tempnam($this->homedir, 'rcube_mail_full_');
-            $cert_file   = tempnam($this->homedir, 'rcube_mail_cert_');
-            $part_file   = tempnam($this->homedir, 'rcube_mail_part_');
+            $msg_part  = $struct->parts[0];
+            $full_file = tempnam($this->homedir, 'rcube_mail_full_');
+            $cert_file = tempnam($this->homedir, 'rcube_mail_cert_');
+            $part_file = tempnam($this->homedir, 'rcube_mail_part_');
 
             $full_handle = fopen($full_file, "w");
-            $fullbody = $this->rc->storage->get_raw_body($msg->uid, $full_handle);
+            $fullbody    = $this->rc->storage->get_raw_body($msg->uid, $full_handle);
             fclose($full_handle);
 
-            $out  = array(
+            $out = array(
                 'error' => array(),
             );
             $sig = openssl_pkcs7_verify($full_file, 0, $cert_file);
+
             $errorstr = $this->get_openssl_error();
             if (strlen($errorstr) > 0) {
                 $out['error']['verify1'] = $errorstr;
@@ -198,7 +148,7 @@ class rc_smime extends rcube_plugin
             if ($sig === true) {
                 $out = $this->get_user_info_from_cert($cert_file, 'valid');
             } else {
-                $sig = openssl_pkcs7_verify($full_file, PKCS7_NOVERIFY, $cert_file);
+                $sig      = openssl_pkcs7_verify($full_file, PKCS7_NOVERIFY, $cert_file);
                 $errorstr = $this->get_openssl_error();
                 if (strlen($errorstr) > 0) {
                     $out['error']['verify2'] = $errorstr;
@@ -210,14 +160,15 @@ class rc_smime extends rcube_plugin
                     $out['valid'] = 'invalid';
                 } else {
                     $part_handle = fopen($part_file, "w");
-                    $mimes = $this->rc->storage->conn->fetchMIMEHeaders($msg->folder, $msg->uid, $struct->mime_id, true);
+                    $mimes       = $this->rc->storage->conn->fetchMIMEHeaders($msg->folder, $msg->uid, $struct->mime_id, true);
                     foreach (array_values($mimes) as $mime) {
                         fwrite($part_handle, $mime);
                     }
+
                     fwrite($part_handle, "\n");
-                    $part_out = $this->rc->storage->conn->handlePartBody($msg->folder, $msg->uid, true, $struct->mime_id, NULL, NULL, $part_handle);
+                    $part_out = $this->rc->storage->conn->handlePartBody($msg->folder, $msg->uid, true, $struct->mime_id, null, null, $part_handle);
                     fclose($part_handle);
-                    $sig = openssl_pkcs7_verify($part_file, 0, $cert_file);
+                    $sig      = openssl_pkcs7_verify($part_file, 0, $cert_file);
                     $errorstr = $this->get_openssl_error();
                     if (strlen($errorstr) > 0) {
                         $out['error']['verify3'] = $errorstr;
@@ -226,7 +177,7 @@ class rc_smime extends rcube_plugin
                     if ($sig === true) {
                         $out = $this->get_user_info_from_cert($cert_file, 'valid');
                     } else {
-                        $sig = openssl_pkcs7_verify($part_file, PKCS7_NOVERIFY, $cert_file);
+                        $sig      = openssl_pkcs7_verify($part_file, PKCS7_NOVERIFY, $cert_file);
                         $errorstr = $this->get_openssl_error();
                         if (strlen($errorstr) > 0) {
                             $out['error']['verify4'] = $errorstr;
@@ -264,7 +215,6 @@ class rc_smime extends rcube_plugin
         $cert     = openssl_x509_parse(file_get_contents($file));
         $errorstr = $this->get_openssl_error();
         $sub      = $cert['subject'];
-
         $ret      = array(
             'error' => $errorstr,
             'valid' => $valid,
@@ -294,6 +244,7 @@ class rc_smime extends rcube_plugin
                     array_push ($emailAddresses, $parts[1]);
                 }
             }
+
             if (count($emailAddresses) > 0) {
                 $ret['email'] = $emailAddresses;
             }
@@ -308,6 +259,7 @@ class rc_smime extends rcube_plugin
         while ($errorstr = openssl_error_string()) {
             $tmp[] = $errorstr;
         }
+
         $ret = join("\n", array_values($tmp));
         return strlen($ret) > 0 ? $ret : null;
     }
@@ -335,8 +287,6 @@ class rc_smime extends rcube_plugin
      */
     private function set_part_body($part, $uid)
     {
-        // @TODO: Create such function in core
-        // @TODO: Handle big bodies using file handles
         if (!isset($part->body)) {
             $part->body = $this->rc->storage->get_message_part($uid, $part->mime_id, $part);
         }
@@ -364,6 +314,7 @@ class rc_smime extends rcube_plugin
                 'message' => "Option 'rc_smime_homedir' not specified",
             ), true, false);
         }
+
         if (!file_exists($dir)) {
             return $this->rc->raise_error(array(
                 'code'    => 999,
@@ -373,6 +324,7 @@ class rc_smime extends rcube_plugin
                 'message' => "Keys directory doesn't exists: $dir",
             ), true, false);
         }
+
         if (!is_writable($dir)) {
             return $this->rc->raise_error(array(
                 'code'    => 999,
