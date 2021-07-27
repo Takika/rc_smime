@@ -194,8 +194,10 @@ class rc_smime extends rcube_plugin
                 }
             }
 
-            if (count($out['error']) == 0) {
-                unset($out['error']);
+            if (is_countable($out['error'])) {
+                if (count($out['error']) == 0) {
+                    unset($out['error']);
+                }
             }
 
             unlink($full_file);
