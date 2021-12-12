@@ -1,14 +1,20 @@
 {
-    "name": "takika/rc_smime",
+    "name": "nicrame/rc_smime",
     "type": "roundcube-plugin",
     "description": "Roundcube webmail plugin to verify S/MIME signed messages",
-    "homepage": "https://github.com/Takika/rc_smime",
+    "homepage": "https://github.com/nicrame/rc_smime",
     "license": "AGPLv3",
+    "version": "1.0",
     "authors": [
         {
             "name": "Sandor Takacs",
             "email": "taki@alkoholista.hu",
             "role": "Developer"
+        }
+        {
+            "name": "Marcin Wilk",
+            "email": "marcin@marcinwilk.eu",
+            "role": "Updated Fork"
         }
     ],
     "repositories": [
