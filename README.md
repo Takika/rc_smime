@@ -1,7 +1,7 @@
 rc_smime
 ===============
 
-Roundcube webmail plugin to verify and sign S/MIME messages.  
+Roundcube webmail plugin to verify S/MIME messages.  
 
 This is version with updated graphic (to look more nice in my opinion),  
 Robert Currie (https://github.com/rob-c) that make it work with Roundcube 1.5.  
