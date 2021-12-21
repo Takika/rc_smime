@@ -12,7 +12,7 @@ Installation
     HomeRoundCubeFolder/plugins$ git clone [https://github.com/nicrame/rc_smime.git](https://github.com/nicrame/rc_smime.git)
     
 (Or use composer
-     HomeRoundCubeFolder$ composer require nicrame/rc_smime:dev-master
+     HomeRoundCubeFolder$ composer require nicrame/rc_smime:master
      
  NOTE: Answer **N** when composer ask you about plugin activation)
 
