@@ -3,7 +3,7 @@
     "type": "roundcube-plugin",
     "description": "Roundcube webmail plugin to verify S/MIME signed messages",
     "homepage": "https://github.com/nicrame/rc_smime",
-    "license": "AGPLv3",
+    "license": "AGPL-3.0-or-later",
     "version": "1.0",
     "authors": [
         {
