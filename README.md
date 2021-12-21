@@ -3,7 +3,7 @@ RoundCube S/MIME verification plugin - rc_smime
 
 Roundcube webmail plugin to verify S/MIME messages.  
 
-This is a fork of rc_smime (made by Sandor Takacs - https://github.com/Takika/rc_smime ) with updated design/gfx (to look more nice in my opinion) and fixes by @kochichi (https://github.com/kochichi) that made it work with Roundcube 1.5 and PHP8.  
+This is a fork of rc_smime (made by Sandor Takacs - https://github.com/Takika/rc_smime) with updated design/gfx (to look more nice in my opinion) and fixes by @kochichi (https://github.com/kochichi) that made it work with Roundcube 1.5 and PHP8.  
 Also i've added Polish translation.
   
 Installation
