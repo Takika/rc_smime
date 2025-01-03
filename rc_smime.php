@@ -194,10 +194,6 @@ class rc_smime extends rcube_plugin
                 }
             }
 
-            if (count($out['error']) == 0) {
-                unset($out['error']);
-            }
-
             unlink($full_file);
             unlink($cert_file);
             unlink($part_file);
@@ -216,9 +212,11 @@ class rc_smime extends rcube_plugin
         $errorstr = $this->get_openssl_error();
         $sub      = $cert['subject'];
         $ret      = array(
-            'error' => $errorstr,
             'valid' => $valid,
         );
+        if (strlen($errorstr) > 0) {
+          $ret['error'] = $errorstr;
+        }
 
         if (array_key_exists('emailAddress', $sub)) {
             $ret['email'] = $sub['emailAddress'];
@@ -261,7 +259,7 @@ class rc_smime extends rcube_plugin
         }
 
         $ret = join("\n", array_values($tmp));
-        return strlen($ret) > 0 ? $ret : null;
+        return $ret;
     }
 
     private function set_signed_parts($msg_part, $id)

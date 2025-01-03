@@ -2,33 +2,35 @@
 #messagebody div #smime-message
 {
 margin: 0;
-margin-bottom: 5px;
+margin-bottom: 15px;
 min-height: 20px;
-padding: 10px 10px 6px 46px;
+padding: 7px 7px 6px 42px;
+font-size: 0.9rem;
+color: #2c363a;
 }
 
 div.smime-error,
 #messagebody div.smime-error
 {
-background: url(error.png) 6px 1px no-repeat;
-background-color: #EF9398;
-border: 1px solid #DC5757;
+background: url(error.png) 6px 2px no-repeat;
+background-color: #f0f0f0;
+border: 1px solid #f0f0f0;
 }
 
 div.smime-notice,
 #messagebody div.smime-notice
 {
-background: url(signed.png) 6px 1px no-repeat;
-background-color: #A6EF7B;
-border: 1px solid #76C83F;
+background: url(signed.png) 6px 2px no-repeat;
+background-color: #f0f0f0;
+border: 1px solid #f0f0f0;
 }
 
 div.smime-warning,
 #messagebody div.smime-warning
 {
-background: url(signed.png) 6px 1px no-repeat;
-background-color: #F7FDCB;
-border: 1px solid #C2D071;
+background: url(signed.png) 6px 2px no-repeat;
+background-color: #f0f0f0;
+border: 1px solid #f0f0f0;
 }
 
 #smime-message a
